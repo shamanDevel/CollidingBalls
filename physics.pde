@@ -177,24 +177,30 @@ class PhysicsThread extends Thread
     float[] timeCache = new float[n];
     int[] partnerCache = new int[n];
     Arrays.fill(timeCache, Float.POSITIVE_INFINITY);
+    Arrays.fill(partnerCache, -1);
+    ArrayList<Integer> invalidSpheres = new ArrayList<Integer>(); //The spheres that need to be recalculated
+    ArrayList<Integer> invalidSpheres2 = new ArrayList<Integer>();
+    boolean[] invalidSpheresArray = new boolean[n];
+    Arrays.fill(invalidSpheresArray, false);
     
     // RUN FIRST COMPLETE COLLISION TEST
-    int i=0;
-    int j=0;
-    float deltaT = Float.MAX_VALUE;
     // Sphere-Sphere collision
     for (int ii=0; ii<n-1; ++ii) {
       for (int jj=ii+1; jj<n; ++jj) {
         float t = sphereSphereCollisionTime(balls.G[ii], balls.V[ii], balls.G[jj], balls.V[jj], r);
-        if (t >= 0 && t < timeCache[ii]) {
+        if (t >= 0 && t < timeCache[ii] && t < timeCache[jj]) {
+          if (partnerCache[ii] >= 0 && !invalidSpheresArray[partnerCache[ii]]) {
+            invalidSpheres.add(partnerCache[ii]);
+            invalidSpheresArray[partnerCache[ii]] = true;
+          }
+          if (partnerCache[jj] >= 0 && !invalidSpheresArray[partnerCache[jj]]) {
+            invalidSpheres.add(partnerCache[jj]);
+            invalidSpheresArray[partnerCache[jj]] = true;
+          }
+          timeCache[jj] = t;
+          partnerCache[jj] = ii;
           timeCache[ii] = t;
           partnerCache[ii] = jj;
-        }
-        //System.out.println("sphere "+ii+" and "+jj+" collide at time "+t);
-        if (t >= 0 && t < deltaT && !zeroTimeEvents.contains(new Vec2i(ii, jj))) {
-          deltaT = t;
-          i = ii;
-          j = jj;
         }
       }
     }
@@ -202,103 +208,68 @@ class PhysicsThread extends Thread
     for (int ii=0; ii<n; ++ii) {
       float t = sphereCubeCollisionTime(balls.G[ii], balls.V[ii], r, s, face);
       if (t >= 0 && t < timeCache[ii]) {
+        if (partnerCache[ii] >= 0 && !invalidSpheresArray[partnerCache[ii]]) {
+          invalidSpheres.add(partnerCache[ii]);
+          invalidSpheresArray[partnerCache[ii]] = true;
+        }
         timeCache[ii] = t;
         partnerCache[ii] = -face[0];
       }
-      //System.out.println("sphere "+i+" collides with wall "+face[0]+" at time "+t);
-      if (t >= 0 && t < deltaT && !zeroTimeEvents.contains(new Vec2i(ii, -face[0]))) {
-        deltaT = t;
-        i = ii;
-        j = -face[0];
-      }
-    }
-    //add to list to prevent infinit loops
-    if (deltaT > 0)
-      zeroTimeEvents.clear();
-    zeroTimeEvents.add(new Vec2i(min(i, j), max(i, j)));
-    System.out.println("the next collision happens after "+deltaT+" timesteps between "+i+" and "+j);
-    //move all balls
-    for (int ii=0; ii<n; ++ii) {
-      balls.G[ii].add(deltaT, balls.V[ii]);
-    }
-    tglobal += deltaT;
-    //Change velocities and create event
-    CollisionEvent e;
-    if (j < 0) {
-      balls.V[i].set(sphereCubeVelocityChange(balls.V[i], -j));
-      e = new CollisionEvent(tglobal, i, balls.G[i], balls.V[i]);
-    } else {
-      vec W1 = V();
-      vec W2 = V();
-      sphereSphereVelocityChange(balls.G[i], balls.V[i], balls.G[j], balls.V[j], W1, W2);
-      balls.V[i].set(W1);
-      balls.V[j].set(W2);
-      e = new CollisionEvent(tglobal, i, balls.G[i], balls.V[i], j, balls.G[j], balls.V[j]);
-    } 
-    //Add event
-    try {
-      events.put(e);
-    } catch (InterruptedException ex) {
-      return;
     }
     
     //Debug:
     System.out.println("time cache: "+Arrays.toString(timeCache));
+    System.out.println("partner cache: "+Arrays.toString(partnerCache));
+    System.out.println("invalid spheres: "+invalidSpheres);
     
     // LOOP: only calculate changed times
     while(!Thread.interrupted()) {
       // Sphere-Sphere collision
-      for (int jj=0; jj<n; ++jj) {
-        if (jj==i || jj==j) continue;
-        float t = sphereSphereCollisionTime(balls.G[i], balls.V[i], balls.G[jj], balls.V[jj], r);
-        //System.out.println("sphere "+ii+" and "+jj+" collide at time "+t);
-        if (t >= 0 && t < timeCache[jj] && !zeroTimeEvents.contains(new Vec2i(min(i, jj), max(i, jj)))) {
-          if (partnerCache[i] >= 0)
-            timeCache[partnerCache[i]] = Float.POSITIVE_INFINITY;
-          if (partnerCache[jj] >= 0)
-            timeCache[partnerCache[jj]] = Float.POSITIVE_INFINITY;
-          timeCache[i] = t;
-          partnerCache[i] = jj;
-          timeCache[jj] = t;
-          partnerCache[jj] = i;
-        }
-      }
-      if (j >= 0) {
+      for (int ii : invalidSpheres) {
         for (int jj=0; jj<n; ++jj) {
-          if (jj==i || jj==j) continue;
-          float t = sphereSphereCollisionTime(balls.G[j], balls.V[j], balls.G[jj], balls.V[jj], r);
-          //System.out.println("sphere "+ii+" and "+jj+" collide at time "+t);
-          if (t >= 0 && t < timeCache[jj] && !zeroTimeEvents.contains(new Vec2i(min(j, jj), max(j, jj)))) {
-            if (partnerCache[j] >= 0)
-              timeCache[partnerCache[j]] = Float.POSITIVE_INFINITY;
-            if (partnerCache[jj] >= 0)
+          if (jj==ii) continue;
+          float t = sphereSphereCollisionTime(balls.G[ii], balls.V[ii], balls.G[jj], balls.V[jj], r);
+          //System.out.println("check sphere "+ii+" against "+jj+", t="+t+" timeCache="+timeCache[jj]);
+          if (t >= 0 && t < timeCache[jj] && !zeroTimeEvents.contains(new Vec2i(min(ii, jj), max(ii, jj)))) {
+            if (partnerCache[ii] >= 0 && !invalidSpheresArray[partnerCache[ii]]) {
+              timeCache[partnerCache[ii]] = Float.POSITIVE_INFINITY;
+              invalidSpheres2.add(partnerCache[ii]);
+              invalidSpheresArray[partnerCache[ii]] = true;
+            }
+            if (partnerCache[jj] >= 0 && !invalidSpheresArray[partnerCache[jj]]) {
               timeCache[partnerCache[jj]] = Float.POSITIVE_INFINITY;
-            timeCache[j] = t;
-            partnerCache[j] = jj;
+              invalidSpheres2.add(partnerCache[jj]);
+              invalidSpheresArray[partnerCache[jj]] = true;
+            }
+            timeCache[ii] = t;
+            partnerCache[ii] = jj;
             timeCache[jj] = t;
-            partnerCache[jj] = j;
+            partnerCache[jj] = ii;
           }
-        } 
+        }
       }
       // Sphere-Cube collision
-      float t = sphereCubeCollisionTime(balls.G[i], balls.V[i], r, s, face);
-      if (t >= 0 && t < timeCache[i] && !zeroTimeEvents.contains(new Vec2i(-face[0], i))) {
-        if (partnerCache[i] >= 0)
-          timeCache[partnerCache[i]] = Float.POSITIVE_INFINITY;
-        timeCache[i] = t;
-        partnerCache[i] = -face[0];
-      }
-      if (j >= 0) {
-        t = sphereCubeCollisionTime(balls.G[j], balls.V[j], r, s, face);
-        if (t >= 0 && t < timeCache[j] && !zeroTimeEvents.contains(new Vec2i(-face[0], j))) {
-          if (partnerCache[j] >= 0)
-            timeCache[partnerCache[j]] = Float.POSITIVE_INFINITY;
-          timeCache[j] = t;
-          partnerCache[j] = -face[0];
+      for (int ii : invalidSpheres) {
+        float t = sphereCubeCollisionTime(balls.G[ii], balls.V[ii], r, s, face);
+        if (t >= 0 && t < timeCache[ii] && !zeroTimeEvents.contains(new Vec2i(-face[0], ii))) {
+          if (partnerCache[ii] >= 0 && !invalidSpheresArray[partnerCache[ii]]) {
+            timeCache[partnerCache[ii]] = Float.POSITIVE_INFINITY;
+            invalidSpheres2.add(partnerCache[ii]);
+            invalidSpheresArray[partnerCache[ii]] = true;
+          }
+          timeCache[ii] = t;
+          partnerCache[ii] = -face[0];
         }
       }
+      //swap invalid-spheres list
+      ArrayList<Integer> tmp = invalidSpheres;
+      invalidSpheres = invalidSpheres2;
+      invalidSpheres2 = tmp;
+      invalidSpheres2.clear();
+      Arrays.fill(invalidSpheresArray, false);
       //Search next event
-      deltaT = Float.MAX_VALUE;
+      float deltaT = Float.MAX_VALUE;
+      int i=0, j=0;
       for (int ii=0; ii<n; ++ii) {
         if (timeCache[ii] < deltaT) {
           i = ii;
@@ -321,13 +292,23 @@ class PhysicsThread extends Thread
       tglobal += deltaT;
       
       //Change velocities and create event
+      CollisionEvent e;
       if (j < 0) {
         balls.V[i].set(sphereCubeVelocityChange(balls.V[i], -j));
         e = new CollisionEvent(tglobal, i, balls.G[i], balls.V[i]);
         timeCache[i] = Float.POSITIVE_INFINITY;
+        partnerCache[i] = -10;
+        invalidSpheres.add(i);
+        invalidSpheresArray[i] = true;
       } else {
         timeCache[i] = Float.POSITIVE_INFINITY;
         timeCache[j] = Float.POSITIVE_INFINITY;
+        partnerCache[i] = -10;
+        partnerCache[j] = -10;
+        invalidSpheres.add(i);
+        invalidSpheres.add(j);
+        invalidSpheresArray[i] = true;
+        invalidSpheresArray[j] = true;
         vec W1 = V();
         vec W2 = V();
         sphereSphereVelocityChange(balls.G[i], balls.V[i], balls.G[j], balls.V[j], W1, W2);
@@ -335,6 +316,10 @@ class PhysicsThread extends Thread
         balls.V[j].set(W2);
         e = new CollisionEvent(tglobal, i, balls.G[i], balls.V[i], j, balls.G[j], balls.V[j]);
       }
+      
+      //System.out.println("time cache: "+Arrays.toString(timeCache));
+      //System.out.println("partner cache: "+Arrays.toString(partnerCache));
+      //System.out.println("invalid spheres: "+invalidSpheres);
       
       //Add event
       try {
