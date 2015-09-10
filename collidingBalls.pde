@@ -17,8 +17,6 @@ boolean individual=false, showV=false;
 float t0=0, t1=0, t2=0, t3=0, t4=0, dt01=0, dt12=0, dt23=0, dt34=0; // ti = lap times per frame, and durations in % of u
 int collisions=0;
 
-BALLS oldBalls;
-
 BallUpdater ballUpdater;
 
 void setup() {
@@ -30,7 +28,6 @@ void setup() {
   // Q.loadBALLS("data/BALLS2");  // loads saved model from file
   br=w/(nbs*pow(PI*120/4,1./3));
   P.initPointsOnGrid(nbs,w,br,cyan);
-  oldBalls = new BALLS(P);
   F = P();
   sphereDetail(6);
   frameRate(Frate);
@@ -121,9 +118,9 @@ void keyPressed() {
   if(key=='i') {P.initPointsOnGrid(nbs,w,br,cyan); stop=false;}
   if(key=='a') animating=!animating; // toggle animation
   if(key=='h') {F = P();}  // "home": reserts Focus point F
-  if(key=='+') {nbs++; br=w/(nbs*pow(PI*120/4,1./3)); P.initPointsOnGrid(nbs,w,br,cyan); oldBalls = new BALLS(P); ballUpdater.reset(P); stop=true;}
-  if(key=='-') {nbs=max(1,nbs-1); br=w/(nbs*pow(PI*120/4,1./3)); P.initPointsOnGrid(nbs,w,br,cyan); oldBalls = new BALLS(P); ballUpdater.reset(P); stop=true;}
-  if(key=='r') {br=w/(nbs*pow(PI*120/4,1./3)); P = new BALLS(oldBalls);/*P.initPointsOnGrid(nbs,w,br,cyan);*/ ballUpdater.reset(P); stop=true;}
+  if(key=='+') {nbs++; br=w/(nbs*pow(PI*120/4,1./3)); P.initPointsOnGrid(nbs,w,br,cyan); ballUpdater.reset(P); stop=true;}
+  if(key=='-') {nbs=max(1,nbs-1); br=w/(nbs*pow(PI*120/4,1./3)); P.initPointsOnGrid(nbs,w,br,cyan); ballUpdater.reset(P); stop=true;}
+  if(key=='r') {br=w/(nbs*pow(PI*120/4,1./3)); P.initPointsOnGrid(nbs,w,br,cyan); ballUpdater.reset(P); stop=true;}
   if(key=='4') sphereDetail(4);
   if(key=='5') sphereDetail(5);
   if(key=='6') sphereDetail(6);
