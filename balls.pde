@@ -25,10 +25,14 @@ class BALLS { // class for manipulaitng and displaying points
   void initPointsOnGrid(int nb, float w, float r, color c) { // number of BALLS in each dimension, distance between them 
     empty();
     float d = w / (nb+1), dd=d;
-    for (int i=0; i<nb; i++) 
-      for (int j=0; j<nb; j++) 
+    for (int i=0; i<1; i++) 
+      for (int j=0; j<1; j++) 
         for (int k=0; k<nb; k++)
-          addBall(P(d*i-w/2+dd,d*j-w/2+dd,d*k-w/2+dd),V(random(-1,1),random(-1,1),random(-1,1)),r,c);
+          if(k == 0) 
+            addBall(P(d*i-w/2+dd,d*j-w/2+dd,d*k-w/2+dd),V(0,0,0.5f),r,c);
+          else
+            addBall(P(d*i-w/2+dd,d*j-w/2+dd,d*k-w/2+dd),V(0,0,1),r,c);
+          // addBall(P(d*i-w/2+dd,d*j-w/2+dd,d*k-w/2+dd),V(random(-1,1),random(-1,1),random(-1,1)),r,c);
     }
     
   BALLS addBall(pt Pp, vec Vp, float rp, color cp) { 
