@@ -196,7 +196,7 @@ void displayFooter() { // Displays help text at the bottom
     scribeFooter(menu,0); 
     }
 
-String title ="6491-2015-P1: Animation of colliding balls", name ="Sebastian Weiss",
+String title ="6491-2015-P1: Animation of colliding balls", name ="Sebastian Weiss, Can Erdogan",
        menu="?:help, !:picture, ~:videotape, space:rotate, s/wheel:closer, f/F:refocus, a:anim, #:quit",
        guide="i:reinitialize, a:animate, v:show Vs, +/-: # balls. DRAG b:radius, m:faster"; 
        // user's guide

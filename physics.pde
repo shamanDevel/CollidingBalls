@@ -70,7 +70,7 @@ class BallUpdater
     this.balls = new BALLS(balls);
     this.ballTimes = new float[balls.nv];
     Arrays.fill(this.ballTimes, 0);
-    this.events = new LinkedBlockingQueue<CollisionEvent>(1);//balls.nv);
+    this.events = new LinkedBlockingQueue<CollisionEvent>(balls.nv * 2);
     this.current = null;
     this.tglobal = 0;
     this.thread = new PhysicsThread(balls, events, halfCubeSize);
