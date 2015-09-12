@@ -4,7 +4,7 @@ float rx=-0.06*TWO_PI, ry=-0.04*TWO_PI;    // view angles manipulated when space
 Boolean animating=true, tracking=false, center=true, showNormals=false;
 float t=0, s=0;
 float w=400; // half-size of the cube
-float mv=1; // magnifier of max initial speed of the balls
+float mv=2; // magnifier of max initial speed of the balls
 pt F = P(0,0,0);  // focus point:  the camera is looking at it (moved when 'f or 'F' are pressed
 pt Of=P(100,100,0), Ob=P(110,110,0); // red point controlled by the user via mouseDrag : used for inserting vertices ...
 // int nbs = 2; // number of balls = nbs*nbs*nbs
@@ -61,7 +61,7 @@ void draw() {
    t1 = millis();
    // your physics module that compute future events goes here
    if(animating && !stop) {
-     collisions=ballUpdater.calculatePhysics(2);
+     collisions=ballUpdater.calculatePhysics(mv);
      if (collisions > 0 && individual)
        stop = true;
      P.bounceBalls(w);
