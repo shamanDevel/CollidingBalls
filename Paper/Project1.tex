@@ -121,10 +121,10 @@ The pseudocode Alg.\ref{alg1} sketches the actions executed every frame:
 \end{algorithmic}
 \end{algorithm}
 
-\subsection{Physics thread}
-The pseudocode Alg.\ref{alg2} sketches the physics thread. The physics thread works on its own copy of the initial state.
+\subsection{Physics thread 1}
+The pseudocode Alg.\ref{alg2} sketches the basic work of the physics thread. The physics thread works on its own copy of the initial state.
 \begin{algorithm}
-\caption{physics thread}
+\caption{physics thread - $O(n^2)$}
 \label{alg2}
 \begin{algorithmic}
 	\REQUIRE the initial set of spheres $S$ and the queue used for communication
@@ -152,10 +152,133 @@ The pseudocode Alg.\ref{alg2} sketches the physics thread. The physics thread wo
 \end{algorithm}
 Since we assume that at least one velocity is not the null vector, at least one collision is always found.
 
-\subsection{Optimization and complexity}
-Until now, the execution of one loop iteration in the physics thread requires $O(n^2)$ time ($n$ is the number of spheres) since $\binom{\{0,...,n-1\}}{2}$ counts $O(n^2)$ elements. This can be improved to linear time in $n$ after a first initialization step in $O(n^2)$ time.
+\subsection{Improvement to linear time}
+The algorithm as described above needs $O(n^2)$ time ($n$ is the number of spheres) per loop iteration.
+This can be improved to linear time by the following idea:
 
 It is not needed to recompute all $\binom{n}{2}$ pairs after one collision. First, for every sphere, the next collision is stored, including the time and collision partner (sphere or cube face). This requires one complete collision check in $O(n^2)$ at the beginning. After a collision, only the modified spheres are then checked for collisions with the other spheres and the bounding box, and the stored collision for these spheres are updated. This operation runs in $O(n)$. The other sphere-sphere pairs remain unaffected. To find the next collision, one must iterate through all the stored collisions in the spheres, so again a time of $O(n)$.
+
+\begin{algorithm}
+\caption{initial collision test}
+\label{alg3.1}
+\begin{algorithmic}
+	\REQUIRE $n$,$timeCache$,$partnerCache$,$invalidSpheres$
+	\FORALL{$\{i',j'\} \in \binom{\{0,...,n-1\}}{2}$}
+		\STATE $t \leftarrow $ collision time between sphere $i'$ and $j'$ (see \ref{SSC})
+		\IF{$t$ is finite and non-zero \AND $t<timeCache[i']$ \AND $t<timeCache[j']$}
+			\IF{$\exists k' : partnerCache[i']=\text{'Sphere'}k'$}
+				\STATE $invalidSpheres$ += $k'$
+				\STATE $timeCache[k'] \leftarrow$ $\infty$
+				\STATE $partnerCache[k'] \leftarrow$ 'NoPartner'
+			\ENDIF
+			\IF{$\exists k' : partnerCache[j']=\text{'Sphere'}k'$}
+				\STATE $invalidSpheres$ += $k'$
+				\STATE $timeCache[k'] \leftarrow$ $\infty$
+				\STATE $partnerCache[k'] \leftarrow$ 'NoPartner'
+			\ENDIF
+			\STATE $timeCache[i'] \leftarrow t$
+			\STATE $timeCache[j'] \leftarrow t$
+			\STATE $partnerCache[i'] \leftarrow \text{'Sphere'}j'$
+			\STATE $partnerCache[j'] \leftarrow \text{'Sphere'}i'$
+		\ENDIF
+	\ENDFOR
+	\FORALL{$i' \in \{0,...,n-1\}$}
+		\STATE $t \leftarrow $ collision time between sphere $i'$ and the surrounding cube (see \ref{SCC})
+		\IF{$t$ is finite and non-zero \AND $t<timeCache[i']$}
+			\IF{$\exists k' : partnerCache[i']=\text{'Sphere'}k'$}
+				\STATE $invalidSpheres$ += $k'$
+				\STATE $timeCache[k'] \leftarrow$ $\infty$
+				\STATE $partnerCache[k'] \leftarrow$ 'NoPartner'
+			\ENDIF
+			\STATE $timeCache[i'] \leftarrow t$
+			\STATE $partnerCache[i'] \leftarrow \text{'Cube'}j'$
+		\ENDIF
+	\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{recalculate invalidated spheres}
+\label{alg3.2}
+\begin{algorithmic}
+	\REQUIRE $n$,$timeCache$,$partnerCache$,$invalidSpheres$
+	\WHILE{$invalidSpheres$ is not empty}
+			\STATE $i' \leftarrow invalidSpheres.pop()$
+			\FORALL{$j' \in \{0,...,n-1\} \backslash \{i'\}$}
+				\STATE $t \leftarrow $ collision time between sphere $i'$ and $j'$ (see \ref{SSC})
+				\IF{$t$ is finite and non-zero \AND $t<timeCache[j']$}
+					\IF{$\exists k' : partnerCache[j']=\text{'Sphere'}k'$}
+						\STATE $invalidSpheres$ += $k'$
+						\STATE $timeCache[k'] \leftarrow$ $\infty$
+						\STATE $partnerCache[k'] \leftarrow$ 'NoPartner'
+					\ENDIF
+					\STATE $timeCache[i'] \leftarrow t$
+					\STATE $timeCache[j'] \leftarrow t$
+					\STATE $partnerCache[i'] \leftarrow \text{'Sphere'}j'$
+					\STATE $partnerCache[j'] \leftarrow \text{'Sphere'}i'$
+				\ENDIF
+			\ENDFOR
+			\STATE $t \leftarrow $ collision time between sphere $i'$ and the surrounding cube (see \ref{SCC})
+			\IF{$t$ is finite and non-zero \AND $t<timeCache[i']$}
+				\IF{$\exists k' : partnerCache[i']=\text{'Sphere'}k'$}
+					\STATE $invalidSpheres$ += $k'$
+					\STATE $timeCache[k'] \leftarrow$ $\infty$
+					\STATE $partnerCache[k'] \leftarrow$ 'NoPartner'
+				\ENDIF
+				\STATE $timeCache[i'] \leftarrow t$
+				\STATE $partnerCache[i'] \leftarrow \text{'Cube'}j'$
+			\ENDIF
+		\ENDWHILE
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{physics thread - $O(n)$}
+\label{alg3}
+\begin{algorithmic}
+	\REQUIRE the initial set of spheres $S$ and the queue used for communication
+	\STATE $t_\text{global}=0$ \COMMENT{start time}
+	\STATE $timeCache$ : array[n]
+	\STATE $partnerCache$ : array[n]
+	\STATE fill $timeCache$ with $\infty$
+	\STATE fill $partnerCache$ with 'NoPartner'
+	\STATE $invalidSpheres$ = $\emptyset$ \COMMENT{Set of sphers which must be recalculated}
+	\STATE run the initial collision test, \ref{alg3.1}
+	\LOOP[main loop]
+		\STATE recalculate invalidated spheres, \ref{alg3.2}
+		\STATE $i \leftarrow \text{null}$, $j \leftarrow \text{null}$.
+		\STATE $\Delta t \leftarrow  \infty$.
+		\FORALL[Search next event]{$i' \in \{0,...,n-1\}$}
+			\IF{$timeCache[i'] < \Delta t$}
+				\STATE $i \leftarrow i'$
+				\STATE $j \leftarrow partnerCache[i']$
+				\STATE $\Delta t \leftarrow timeCache[i']$
+			\ENDIF
+		\ENDFOR
+		\STATE Move all spheres $\Delta t$ time steps.
+		\STATE Add $\Delta t$ to $t_\text{global}$.
+		\IF{$j$ indicates a sphere}
+			\STATE Modify $V_i$, $V_j$ according to \ref{SSV}.
+			\STATE Add event $(t_\text{global}, \{(i, A_i, V_i), (j, A_j, V_j)\})$ to the queue, wait if necessary.
+		\ELSE[$j$ indicates a cube]
+			\STATE Modify $V_i$ according to \ref{SCV}.
+			\STATE Add event $(t_\text{global}, \{(i, A_i, V_i)\})$ to the queue, wait if necessary.
+			\STATE $timeCache[j] \leftarrow$ $\infty$
+			\STATE $partnerCache[j] \leftarrow$ 'NoPartner'
+		\ENDIF
+		\STATE $timeCache[i] \leftarrow$ $\infty$
+		\STATE $partnerCache[i] \leftarrow$ 'NoPartner'
+	\ENDLOOP
+\end{algorithmic}
+\end{algorithm}
+
+TODO: explanation why the test for partner invalidation is neccessary (image)
+
+TODO: add a note about zero-time events.
+
+TODO: Move extended algorithm in APPENDIX.
+
+\section{Results}
 
 \section{Future work}
 As an extension to this simulation, several constraints could be weakened. The spheres could have different radii or different masses. Also the restriction on a centered, axis-aligned cube can be weakened to support arbitrary orientated planes. This all requires changes in the collision formulas.
