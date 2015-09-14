@@ -18,6 +18,7 @@ float t0=0, t1=0, t2=0, t3=0, t4=0, dt01=0, dt12=0, dt23=0, dt34=0; // ti = lap 
 int collisions=0;
 
 BallUpdater ballUpdater;
+PrintWriter writer = createWriter("bla");
 
 void setup() {
   myFace = loadImage("data/pic.jpg");  // load image from file pic.jpg in folder data *** replace that file with your pic of your own face
@@ -36,6 +37,8 @@ void setup() {
   ballUpdater = new BallUpdater(P, w/2);
   }
 
+Boolean recordTimings = false;
+int counter = 0;
 void draw() {
   t0 = millis();
   background(255);
@@ -95,9 +98,20 @@ void draw() {
   if(scribeText && !filming) displayFooter(); // shows menu at bottom, only if not filming
   if (animating) { t+=PI/180/2; if(t>=TWO_PI) t=0; s=(cos(t)+1.)/2; } // periodic change of time 
   t4 = millis();
-  if(!stop) {dt01=(t1-t0)/10/u; dt12=(t2-t1)/10/u; dt23=(t3-t2)/10/u; dt34=(t4-t3)/10/u;}
+  
+  if(!stop) {
+  dt01=(t1-t0)/10/u; dt12=(t2-t1)/10/u; dt23=(t3-t2)/10/u; dt34=(t4-t3)/10/u;
+  if(recordTimings) {
+  counter = counter+1;
+  if(counter % 100 == 99) {nbs++; br=w/(nbs*pow(PI*120/4,1./3)); P.initPointsOnGrid(nbs,w,br,cyan); ballUpdater.reset(P); stop=true; }
+    writer.printf("%d\t%.10f\t%.10f\t%.10f\t%.10f\n", counter, dt01,dt12, dt23,dt34);
+    writer.flush();
+    //System.out.printf("%.10f\t%.10f\t%.10f\t%.10f\n", dt01,dt12, dt23,dt34);
+  }
+}
   scribe("nbs = "+nbs+", "+(nbs*nbs*nbs)+" balls, "+nf(collisions,3,0)+" collisions per frame",10,40); 
-  scribe("dt01 = "+nf(dt01,2,1)+"%, dt12 = "+nf(dt12,2,1)+"%, dt23 = "+nf(dt23,2,1)+"%, dt34 = "+nf(dt34,2,1)+"%",10,60); 
+  
+  scribe("dt01 = "+nf(dt01,2,1)+"%, dt12 = "+nf(dt12,2,1)+"%, dt23 = "+nf(dt23,2,1)+"%, dt34 = "+nf(dt34,2,1)+"%",10,60);
   if(filming && (animating || change)) saveFrame("FRAMES/F"+nf(frameCounter++,4)+".png");  // save next frame to make a movie
 
   if((t4-t0)/10/u>99 || stop) {
@@ -146,7 +160,7 @@ void keyPressed() {
   if(key=='L') {P.loadBALLS("data/BALLS"); Q.loadBALLS("data/BALLS2");}   // loads saved model
   if(key=='w') P.saveBALLS("data/BALLS");   // save vertices to BALLS
   if(key=='l') P.loadBALLS("data/BALLS"); 
-  if(key=='#') exit();
+  if(key=='#') {writer.close(); writer.flush(); exit();}
   change=true;
   }
 

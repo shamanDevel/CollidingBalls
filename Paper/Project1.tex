@@ -27,7 +27,7 @@
 \title{Cube with Spheres \\
 	{\large Project 1 for class CS6491 Computer Graphics}}
 %\author{Sebastian Weiss}
-\author{Sebastian Weiss \\ \today}
+\author{Sebastian Weiss, Can Erdogan \\ \today}
 %\date{\today}
 
 \maketitle
@@ -272,13 +272,37 @@ It is not needed to recompute all $\binom{n}{2}$ pairs after one collision. Firs
 \end{algorithmic}
 \end{algorithm}
 
-TODO: explanation why the test for partner invalidation is neccessary (image)
+\begin{figure}[ht!] 
+  \centering
+  \includegraphics[width=0.7\linewidth]{invalidatePartners.png}
+  \caption{A case in linear time approach: detection of a collision before previously recorded ones can trigger their recomputation.}
+  \label{fig:invalidate}
+\end{figure}
 
+Figure \ref{fig:invalidate} demonstrates a case in the linear time improvement approach where, if
+the collision DB, with time $t_{DB} < t_{AB}$ and $t_{DB} < t_{BC}$ is detected after the collisions
+AD and BC, those collisions have to be invalidated and collision checks for the spheres A and C have 
+to be repeated. Note that in this procedure, we also have to beware of zero-time events, as they could
+lead to infinite loops. To prevent such an occasion, we keep track of any collision $IJ$ that happens at $t_{IJ} = 0$
+and avoid reprocessing them if the aforementioned invalidation case occurs. 
+  
+TODO: explanation why the test for partner invalidation is neccessary (image)
 TODO: add a note about zero-time events.
 
 TODO: Move extended algorithm in APPENDIX.
 
 \section{Results}
+
+Figure \ref{fig:results} demonstrates the operation times as the square cube of the number of balls are increased from 2 to 13. 
+As expected, removing the physics computation to another thread helped us reach a simulation of 2197 balls. The dominant
+factors in the computation seem to be the communication with the physics thread and visualization.
+
+\begin{figure}[ht!] 
+  \centering
+  \includegraphics[width=1.0\linewidth]{results.png}
+  \caption{The operation times for frame set up, communication with physics thread, updating ball positions and visualization.}
+  \label{fig:results}
+\end{figure}
 
 \section{Future work}
 As an extension to this simulation, several constraints could be weakened. The spheres could have different radii or different masses. Also the restriction on a centered, axis-aligned cube can be weakened to support arbitrary orientated planes. This all requires changes in the collision formulas.
