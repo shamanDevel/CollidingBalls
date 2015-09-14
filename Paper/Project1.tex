@@ -20,6 +20,11 @@
 
 \hyphenation{render}
 
+% No clubs and widows allowed
+\clubpenalty10000
+\widowpenalty10000
+\displaywidowpenalty=10000
+
 \begin{document}
 
 %\title{Simulating elastic spheres without external forces}
@@ -160,22 +165,38 @@ It is not needed to recompute all $\binom{n}{2}$ pairs after one collision. Firs
 
 \begin{figure}[ht!] 
   \centering
-  \includegraphics[width=0.7\linewidth]{invalidatePartners.png}
+  %\includegraphics[width=0.7\linewidth]{invalidatePartners.png}
+	\begin{tikzpicture}[scale=0.75]
+		\tikzstyle{node1}=[circle,draw,color=black,minimum size=30,inner sep=0pt]
+		\tikzstyle{node2}=[circle,draw,color=red,minimum size=30,inner sep=0pt]
+		\tikzstyle{node3}=[circle,draw,dashed,color=black,minimum size=30,inner sep=0pt]
+		\tikzstyle{node4}=[circle,draw,dashed,color=red,minimum size=30,inner sep=0pt]
+		\tikzstyle{edge}=[thin,dashed,->]
+		\node[node1] (A1) at (0,0) {A};
+		\node[node1] (B1) at (-4,6) {B};
+		\node[node2] (C1) at (-3,3) {C};
+		\node[node3] (A2) at (3.15,6.3) {A};
+		\draw[edge] (A1) -- (A2);
+		\node[node3] (B2) at (2.4,7.45) {B};
+		\draw[edge] (B1) -- (B2);
+		\node[node4] (A3) at (3.15*0.4,6.3*0.4) {A};
+		\node[node4] (C3) at (0.0,3.2) {C};
+		\draw[edge,red] (A1) -- (A3);
+		\draw[edge,red] (C1) -- (C3);
+	\end{tikzpicture}
   \caption{A case in linear time approach: detection of a collision before previously recorded ones can trigger their recomputation.}
   \label{fig:invalidate}
 \end{figure}
 
 Figure \ref{fig:invalidate} demonstrates a case in the linear time improvement approach where, if
-the collision DB, with time $t_{DB} < t_{AB}$ and $t_{DB} < t_{BC}$ is detected after the collisions
-AD and BC, those collisions have to be invalidated and collision checks for the spheres A and C have 
-to be repeated. Note that in this procedure, we also have to beware of zero-time events, as they could
+the collision AC, with time $t_{AC} < t_{AB}$ is detected after the collisions AB. In that case, the sphere B is invalidated and its next collision time has to
+be recomputed. If this is not done, sphere B triggers an event at time $t_{AB}$, but at this point, sphere A has already collided with sphere C and is somewhere entirely else.
+
+Note that in this procedure, we also have to beware of zero-time events, as they could
 lead to infinite loops. To prevent such an occasion, we keep track of any collision $IJ$ that happens at $t_{IJ} = 0$
 and avoid reprocessing them if the aforementioned invalidation case occurs. 
 
 See Appendix for a detailed outline of the algorithm.
-  
-TODO: explanation why the test for partner invalidation is neccessary (image)
-TODO: add a note about zero-time events.
 
 \section{Results}
 
