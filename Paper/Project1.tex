@@ -158,6 +158,44 @@ This can be improved to linear time by the following idea:
 
 It is not needed to recompute all $\binom{n}{2}$ pairs after one collision. First, for every sphere, the next collision is stored, including the time and collision partner (sphere or cube face). This requires one complete collision check in $O(n^2)$ at the beginning. After a collision, only the modified spheres are then checked for collisions with the other spheres and the bounding box, and the stored collision for these spheres are updated. This operation runs in $O(n)$. The other sphere-sphere pairs remain unaffected. To find the next collision, one must iterate through all the stored collisions in the spheres, so again a time of $O(n)$.
 
+\begin{figure}[ht!] 
+  \centering
+  \includegraphics[width=0.7\linewidth]{invalidatePartners.png}
+  \caption{A case in linear time approach: detection of a collision before previously recorded ones can trigger their recomputation.}
+  \label{fig:invalidate}
+\end{figure}
+
+Figure \ref{fig:invalidate} demonstrates a case in the linear time improvement approach where, if
+the collision DB, with time $t_{DB} < t_{AB}$ and $t_{DB} < t_{BC}$ is detected after the collisions
+AD and BC, those collisions have to be invalidated and collision checks for the spheres A and C have 
+to be repeated. Note that in this procedure, we also have to beware of zero-time events, as they could
+lead to infinite loops. To prevent such an occasion, we keep track of any collision $IJ$ that happens at $t_{IJ} = 0$
+and avoid reprocessing them if the aforementioned invalidation case occurs. 
+
+See Appendix for a detailed outline of the algorithm.
+  
+TODO: explanation why the test for partner invalidation is neccessary (image)
+TODO: add a note about zero-time events.
+
+\section{Results}
+
+Figure \ref{fig:results} demonstrates the operation times as the square cube of the number of balls are increased from 2 to 13. 
+As expected, removing the physics computation to another thread helped us reach a simulation of 2197 balls. The dominant
+factors in the computation seem to be the visualization, followed by the communication with the physics thread.
+
+\begin{figure}[ht!] 
+  \centering
+  \includegraphics[width=1.0\linewidth]{results.png}
+  \caption{The operation times for frame set up, communication with physics thread, updating ball positions and visualization.}
+  \label{fig:results}
+\end{figure}
+
+\section{Future work}
+As an extension to this simulation, several constraints could be weakened. The spheres could have different radii or different masses. Also the restriction on a centered, axis-aligned cube can be weakened to support arbitrary orientated planes. This all requires changes in the collision formulas.
+
+\appendix[Detailed physics thread]
+The following algorithms show the details of the physics calculation.
+
 \begin{algorithm}
 \caption{initial collision test}
 \label{alg3.1}
@@ -271,40 +309,5 @@ It is not needed to recompute all $\binom{n}{2}$ pairs after one collision. Firs
 	\ENDLOOP
 \end{algorithmic}
 \end{algorithm}
-
-\begin{figure}[ht!] 
-  \centering
-  \includegraphics[width=0.7\linewidth]{invalidatePartners.png}
-  \caption{A case in linear time approach: detection of a collision before previously recorded ones can trigger their recomputation.}
-  \label{fig:invalidate}
-\end{figure}
-
-Figure \ref{fig:invalidate} demonstrates a case in the linear time improvement approach where, if
-the collision DB, with time $t_{DB} < t_{AB}$ and $t_{DB} < t_{BC}$ is detected after the collisions
-AD and BC, those collisions have to be invalidated and collision checks for the spheres A and C have 
-to be repeated. Note that in this procedure, we also have to beware of zero-time events, as they could
-lead to infinite loops. To prevent such an occasion, we keep track of any collision $IJ$ that happens at $t_{IJ} = 0$
-and avoid reprocessing them if the aforementioned invalidation case occurs. 
-  
-TODO: explanation why the test for partner invalidation is neccessary (image)
-TODO: add a note about zero-time events.
-
-TODO: Move extended algorithm in APPENDIX.
-
-\section{Results}
-
-Figure \ref{fig:results} demonstrates the operation times as the square cube of the number of balls are increased from 2 to 13. 
-As expected, removing the physics computation to another thread helped us reach a simulation of 2197 balls. The dominant
-factors in the computation seem to be the communication with the physics thread and visualization.
-
-\begin{figure}[ht!] 
-  \centering
-  \includegraphics[width=1.0\linewidth]{results.png}
-  \caption{The operation times for frame set up, communication with physics thread, updating ball positions and visualization.}
-  \label{fig:results}
-\end{figure}
-
-\section{Future work}
-As an extension to this simulation, several constraints could be weakened. The spheres could have different radii or different masses. Also the restriction on a centered, axis-aligned cube can be weakened to support arbitrary orientated planes. This all requires changes in the collision formulas.
 
 \end{document}
