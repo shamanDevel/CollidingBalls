@@ -175,42 +175,10 @@ class PhysicsThread extends Thread
     Set <Integer> invalidSpheres = new HashSet <Integer> ();
     
     // RUN FIRST COMPLETE COLLISION TEST
-    // Sphere-Sphere collision
-    for (int ii=0; ii<n-1; ++ii) {
-      for (int jj=ii+1; jj<n; ++jj) {
-        float t = sphereSphereCollisionTime(balls.G[ii], balls.V[ii], balls.G[jj], balls.V[jj], r);
-        if (t >= 0 && t < timeCache[ii] && t < timeCache[jj]) {
-          if (partnerCache[ii] >= 0) {
-            invalidSpheres.add(partnerCache[ii]);
-            timeCache[partnerCache[ii]] = Float.POSITIVE_INFINITY;
-            partnerCache[partnerCache[ii]] = -10;
-          }
-          if (partnerCache[jj] >= 0) {
-            invalidSpheres.add(partnerCache[jj]);
-            timeCache[partnerCache[jj]] = Float.POSITIVE_INFINITY;
-            partnerCache[partnerCache[jj]] = -10;
-          }
-          timeCache[jj] = t;
-          partnerCache[jj] = ii;
-          timeCache[ii] = t;
-          partnerCache[ii] = jj;
-        }
-      }
+    for (int i=0; i<n; ++i) {
+      invalidSpheres.add(i);
     }
-    // Sphere-Cube collision
-    for (int ii=0; ii<n; ++ii) {
-      float t = sphereCubeCollisionTime(balls.G[ii], balls.V[ii], r, s, face);
-      if (t >= 0 && t < timeCache[ii]) {
-        if (partnerCache[ii] >= 0) {
-          invalidSpheres.add(partnerCache[ii]);
-          timeCache[partnerCache[ii]] = Float.POSITIVE_INFINITY;
-          partnerCache[partnerCache[ii]] = -10;
-        }
-        timeCache[ii] = t;
-        partnerCache[ii] = -face[0];
-      }
-    }
-    
+
     // LOOP: ONLY CALCULATE CHANGED SPHERES
     while(!Thread.interrupted()) {
       // Sphere-Sphere collision
